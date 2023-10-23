@@ -186,6 +186,14 @@ module.exports = function (app, shopData) {
       });
     });
 
+    app.get("/logout", redirectLogin, (req, res) => {
+      req.session.destroy((err) => {
+        if (err) {
+          return res.redirect("./");
+        }
+        res.send("you are now logged out. <a href=" + "./" + ">Home</a>");
+      });
+    });
 
   // end of module
 };
