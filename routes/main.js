@@ -2,6 +2,14 @@ const bcrypt = require("bcrypt");
 module.exports = function (app, shopData) {
   // Handle our routes
 
+  const redirectLogin = (req, res, next) => {
+    if (!req.session.userId) {
+      res.redirect("./login");
+    } else {
+      next();
+    }
+  };
+
   // home page route
   app.get("/", function (req, res) {
     res.render("index.ejs", shopData);
@@ -13,12 +21,12 @@ module.exports = function (app, shopData) {
   });
 
   // search page route
-  app.get("/search", function (req, res) {
+  app.get("/search", redirectLogin,function (req, res) {
     res.render("search.ejs", shopData);
   });
 
   // search result route
-  app.get("/search-result", function (req, res) {
+  app.get("/search-result", redirectLogin, function (req, res) {
     //searching in the database
     const q = req.query.keyword;
     let sqlquery = `SELECT * FROM  books where name LIKE "%${q}%"`;
@@ -38,7 +46,7 @@ module.exports = function (app, shopData) {
   });
 
   // list route
-  app.get("/list", (req, res) => {
+  app.get("/list", redirectLogin, (req, res) => {
     let sqlquery = "SELECT * FROM books";
     db.query(sqlquery, (err, result) => {
       if (err) {
@@ -54,13 +62,14 @@ module.exports = function (app, shopData) {
     const saltRounds = 10;
     const plainPassword = req.body.password;
 
-    const sqlquery = "CALL InsertNewUser(?, ?, ?, ?)";
+    const sqlquery = "CALL InsertNewUser(?, ?, ?, ?,?)";
 
     // hashing password
     bcrypt.hash(plainPassword, saltRounds, function (err, hashedPassword) {
       // Store hash in your password DB.
       const values = [
         req.body.email,
+        req.body.username,
         req.body.first,
         req.body.last,
         hashedPassword,
@@ -86,12 +95,12 @@ module.exports = function (app, shopData) {
   });
 
   // add book  route
-  app.get("/addbook", function (req, res) {
+  app.get("/addbook", redirectLogin, function (req, res) {
     res.render("addbook.ejs", shopData);
   });
 
   // bookadded route
-  app.post("/bookadded", function (req, res) {
+  app.post("/bookadded", redirectLogin, function (req, res) {
     // saving data in database
     let sqlquery = "INSERT INTO books (name, price) VALUES (?,?)";
     // execute sql query
@@ -123,7 +132,7 @@ module.exports = function (app, shopData) {
   });
 
   // listusers route
-  app.get("/listusers", (req, res) => {
+  app.get("/listusers", redirectLogin, (req, res) => {
     let sqlquery = "SELECT first, last, email FROM users";
     db.query(sqlquery, (err, result) => {
       if (err) {
@@ -164,6 +173,8 @@ module.exports = function (app, shopData) {
               result[0].password,
               function (err, result) {
                 if (result === true) {
+                  // Save user session here, when login is successful
+                  req.session.userId = req.body.username;
                   res.send("Login successful");
                 } else {
                   res.send("Incorrect password");
@@ -174,6 +185,7 @@ module.exports = function (app, shopData) {
         }
       });
     });
+
 
   // end of module
 };
